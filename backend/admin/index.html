@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SCI Past Papers — Admin</title>
+<style>
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #F5F7FB;
+    color: #172033;
+  }
+
+  /* LOGIN SCREEN */
+  #loginScreen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .loginCard {
+    background: #FFFFFF;
+    border-radius: 18px;
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 360px;
+    border: 1px solid #E4EAF3;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  }
+
+  .loginCard h1 {
+    font-size: 20px;
+    margin: 0 0 4px;
+    color: #172033;
+  }
+
+  .loginCard p {
+    font-size: 13px;
+    color: #7B879A;
+    margin: 0 0 24px;
+  }
+
+  .field {
+    margin-bottom: 14px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #354154;
+    margin-bottom: 6px;
+  }
+
+  .field input {
+    width: 100%;
+    height: 46px;
+    border-radius: 10px;
+    border: 1px solid #DCE3ED;
+    background: #FAFBFD;
+    padding: 0 14px;
+    font-size: 14px;
+    color: #1D2738;
+  }
+
+  .field input:focus {
+    outline: none;
+    border-color: #0756D9;
+  }
+
+  .primaryButton {
+    width: 100%;
+    height: 48px;
+    border-radius: 12px;
+    border: none;
+    background: #0756D9;
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+
+  .primaryButton:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .errorText {
+    color: #E53935;
+    font-size: 12px;
+    margin-top: 10px;
+    display: none;
+  }
+
+  /* DASHBOARD SHELL */
+  #dashboardScreen {
+    display: none;
+    min-height: 100vh;
+  }
+
+  .topbar {
+    background: linear-gradient(135deg, #0756D9, #063B96);
+    color: #FFFFFF;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .topbar h1 {
+    font-size: 18px;
+    margin: 0;
+  }
+
+  .topbar p {
+    font-size: 12px;
+    color: #DCE9FF;
+    margin: 2px 0 0;
+  }
+
+  .logoutButton {
+    background: rgba(255,255,255,0.16);
+    border: none;
+    color: #FFFFFF;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 24px 0;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .tabButton {
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: 1px solid #E4EAF3;
+    background: #FFFFFF;
+    font-size: 13px;
+    font-weight: 700;
+    color: #7B879A;
+    cursor: pointer;
+  }
+
+  .tabButton.active {
+    background: #0756D9;
+    color: #FFFFFF;
+    border-color: #0756D9;
+  }
+
+  .statusFilterSelect {
+    margin-left: auto;
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid #DCE3ED;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #354154;
+    background: #FFFFFF;
+    cursor: pointer;
+  }
+
+  .refreshButton {
+    background: #FFFFFF;
+    color: #0756D9;
+    border-color: #0756D9;
+  }
+
+  .content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 18px 24px 60px;
+  }
+
+  .emptyState {
+    background: #FFFFFF;
+    border: 1px solid #E4EAF3;
+    border-radius: 16px;
+    padding: 50px 20px;
+    text-align: center;
+    color: #7B879A;
+    font-size: 14px;
+  }
+
+  .card {
+    background: #FFFFFF;
+    border: 1px solid #E4EAF3;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .cardTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .paperCode {
+    color: #0756D9;
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .statusBadge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    vertical-align: middle;
+  }
+
+  .statusBadge-pending {
+    background: #FFF6E5;
+    color: #B8860B;
+  }
+
+  .statusBadge-approved {
+    background: #E5F7ED;
+    color: #1FA463;
+  }
+
+  .statusBadge-rejected {
+    background: #FFF1F1;
+    color: #E53935;
+  }
+
+  .paperTitle {
+    font-size: 15px;
+    font-weight: 700;
+    color: #172033;
+    margin: 3px 0 6px;
+  }
+
+  .metaRow {
+    font-size: 12px;
+    color: #7B879A;
+  }
+
+  .metaRow span:not(:last-child)::after {
+    content: '•';
+    margin: 0 6px;
+    color: #AAB4C3;
+  }
+
+  .pdfLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+    color: #0756D9;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .cardActions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .actionButton {
+    flex: 1;
+    height: 40px;
+    border-radius: 10px;
+    border: none;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .approveButton {
+    background: #E5F7ED;
+    color: #1FA463;
+  }
+
+  .rejectButton {
+    background: #FFF1F1;
+    color: #E53935;
+  }
+
+  .resolveButton {
+    background: #EAF1FF;
+    color: #0756D9;
+  }
+
+  .deleteButton {
+    flex: 0 0 44px;
+    background: #FFF1F1;
+    color: #E53935;
+    font-size: 16px;
+  }
+
+  .reportMessage {
+    font-size: 14px;
+    color: #1D2738;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+
+  .reportDate {
+    font-size: 11px;
+    color: #AAB4C3;
+    margin-top: 8px;
+  }
+
+  .loadingText {
+    text-align: center;
+    color: #7B879A;
+    padding: 30px;
+    font-size: 13px;
+  }
+
+  /* CONFIRM MODAL */
+  .modalOverlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+  }
+
+  .modalOverlay.visible {
+    display: flex;
+  }
+
+  .modalCard {
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 360px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  }
+
+  .modalTitle {
+    font-size: 16px;
+    font-weight: 800;
+    color: #172033;
+    margin: 0 0 8px;
+  }
+
+  .modalMessage {
+    font-size: 13px;
+    color: #637087;
+    line-height: 1.5;
+    margin: 0 0 20px;
+  }
+
+  .modalActions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .modalButton {
+    flex: 1;
+    height: 44px;
+    border-radius: 10px;
+    border: none;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .modalCancelButton {
+    background: #F1F4F9;
+    color: #354154;
+  }
+
+  .modalConfirmButton {
+    background: #E53935;
+    color: #FFFFFF;
+  }
+
+  /* TOAST */
+  .toastContainer {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .toast {
+    background: #172033;
+    color: #FFFFFF;
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+    max-width: 90vw;
+  }
+
+  .toast.toastError {
+    background: #E53935;
+  }
+
+  .toast.toastSuccess {
+    background: #1FA463;
+  }
+</style>
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen">
+    <div class="loginCard">
+      <h1>Admin Login</h1>
+      <p>SCI Past Papers — Maseno University</p>
+
+      <div class="field">
+        <label>Username</label>
+        <input id="loginUsername" type="text" autocomplete="username" />
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" />
+      </div>
+
+      <button class="primaryButton" id="loginButton">Log In</button>
+      <div class="errorText" id="loginError"></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboardScreen">
+    <div class="topbar">
+      <div>
+        <h1>SCI Past Papers — Admin</h1>
+        <p id="welcomeText"></p>
+      </div>
+      <button class="logoutButton" id="logoutButton">Log Out</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tabButton active" data-tab="papers" id="papersTabButton">
+        Papers
+      </button>
+      <button class="tabButton" data-tab="reports" id="reportsTabButton">
+        Reports
+      </button>
+
+      <select id="statusFilter" class="statusFilterSelect">
+        <option value="pending">Pending</option>
+        <option value="approved">Approved</option>
+        <option value="rejected">Rejected</option>
+        <option value="all">All Papers</option>
+      </select>
+
+      <button class="tabButton refreshButton" id="refreshButton">
+        ↻ Refresh
+      </button>
+    </div>
+
+    <div class="content">
+      <div id="papersTab"></div>
+      <div id="reportsTab" style="display: none;"></div>
+    </div>
+  </div>
+
+  <!-- CONFIRM MODAL -->
+  <div class="modalOverlay" id="modalOverlay">
+    <div class="modalCard">
+      <h3 class="modalTitle" id="modalTitle">Are you sure?</h3>
+      <p class="modalMessage" id="modalMessage"></p>
+      <div class="modalActions">
+        <button class="modalButton modalCancelButton" id="modalCancelButton">Cancel</button>
+        <button class="modalButton modalConfirmButton" id="modalConfirmButton">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOASTS -->
+  <div class="toastContainer" id="toastContainer"></div>
+
+<script>
+  const API_BASE = '/api';
+
+  const loginScreen = document.getElementById('loginScreen');
+  const dashboardScreen = document.getElementById('dashboardScreen');
+  const loginButton = document.getElementById('loginButton');
+  const loginError = document.getElementById('loginError');
+  const loginUsername = document.getElementById('loginUsername');
+  const loginPassword = document.getElementById('loginPassword');
+  const welcomeText = document.getElementById('welcomeText');
+  const logoutButton = document.getElementById('logoutButton');
+  const papersTabButton = document.getElementById('papersTabButton');
+  const reportsTabButton = document.getElementById('reportsTabButton');
+  const papersTab = document.getElementById('papersTab');
+  const reportsTab = document.getElementById('reportsTab');
+  const statusFilter = document.getElementById('statusFilter');
+  const refreshButton = document.getElementById('refreshButton');
+
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalMessage = document.getElementById('modalMessage');
+  const modalCancelButton = document.getElementById('modalCancelButton');
+  const modalConfirmButton = document.getElementById('modalConfirmButton');
+  const toastContainer = document.getElementById('toastContainer');
+
+  let currentPaperStatus = 'pending';
+  let pendingConfirmAction = null;
+
+  /* ---------- MODAL ---------- */
+
+  function showConfirmModal(title, message, onConfirm) {
+    modalTitle.textContent = title;
+    modalMessage.textContent = message;
+    pendingConfirmAction = onConfirm;
+    modalOverlay.classList.add('visible');
+  }
+
+  function hideConfirmModal() {
+    modalOverlay.classList.remove('visible');
+    pendingConfirmAction = null;
+  }
+
+  modalCancelButton.addEventListener('click', hideConfirmModal);
+
+  modalOverlay.addEventListener('click', (event) => {
+    if (event.target === modalOverlay) {
+      hideConfirmModal();
+    }
+  });
+
+  modalConfirmButton.addEventListener('click', () => {
+    const action = pendingConfirmAction;
+    hideConfirmModal();
+    if (action) {
+      action();
+    }
+  });
+
+  /* ---------- TOAST ---------- */
+
+  function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = 'toast' + (type ? ' toast' + type.charAt(0).toUpperCase() + type.slice(1) : '');
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+
+    setTimeout(() => {
+      toast.remove();
+    }, 3500);
+  }
+
+  /* ---------- SESSION / API ---------- */
+
+  function getToken() {
+    return localStorage.getItem('adminToken');
+  }
+
+  function setSession(token, username) {
+    localStorage.setItem('adminToken', token);
+    localStorage.setItem('adminUsername', username);
+  }
+
+  function clearSession() {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUsername');
+  }
+
+  async function apiRequest(path, options = {}) {
+    const response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${getToken()}`,
+      },
+    });
+
+    if (response.status === 401) {
+      clearSession();
+      showLogin();
+      throw new Error('Session expired. Please log in again.');
+    }
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.message || `Request failed (${response.status})`);
+    }
+
+    return data;
+  }
+
+  function showLogin() {
+    loginScreen.style.display = 'flex';
+    dashboardScreen.style.display = 'none';
+  }
+
+  function showDashboard() {
+    loginScreen.style.display = 'none';
+    dashboardScreen.style.display = 'block';
+    welcomeText.textContent = `Logged in as ${localStorage.getItem('adminUsername') || 'admin'}`;
+    loadPapers();
+    loadReports();
+  }
+
+  loginButton.addEventListener('click', async () => {
+    const username = loginUsername.value.trim();
+    const password = loginPassword.value;
+
+    if (!username || !password) {
+      loginError.textContent = 'Please enter username and password.';
+      loginError.style.display = 'block';
+      return;
+    }
+
+    loginButton.disabled = true;
+    loginButton.textContent = 'Logging in...';
+    loginError.style.display = 'none';
+
+    try {
+      const response = await fetch(`${API_BASE}/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      setSession(data.token, data.username);
+      loginPassword.value = '';
+      showDashboard();
+    } catch (error) {
+      loginError.textContent = error.message;
+      loginError.style.display = 'block';
+    } finally {
+      loginButton.disabled = false;
+      loginButton.textContent = 'Log In';
+    }
+  });
+
+  logoutButton.addEventListener('click', () => {
+    clearSession();
+    showLogin();
+  });
+
+  papersTabButton.addEventListener('click', () => switchTab('papers'));
+  reportsTabButton.addEventListener('click', () => switchTab('reports'));
+
+  statusFilter.addEventListener('change', (event) => {
+    currentPaperStatus = event.target.value;
+    loadPapers();
+  });
+
+  refreshButton.addEventListener('click', () => {
+    loadPapers();
+    loadReports();
+  });
+
+  function switchTab(tab) {
+    papersTabButton.classList.toggle('active', tab === 'papers');
+    reportsTabButton.classList.toggle('active', tab === 'reports');
+    papersTab.style.display = tab === 'papers' ? 'block' : 'none';
+    reportsTab.style.display = tab === 'reports' ? 'block' : 'none';
+    statusFilter.style.display = tab === 'papers' ? 'inline-block' : 'none';
+  }
+
+  /* ---------- PAPERS ---------- */
+
+  async function loadPapers() {
+    papersTab.innerHTML = '<div class="loadingText">Loading papers...</div>';
+
+    try {
+      const query = currentPaperStatus === 'all' ? 'all' : currentPaperStatus;
+      const papers = await apiRequest(`/admin/papers?status=${query}`);
+
+      if (papers.length === 0) {
+        papersTab.innerHTML = `<div class="emptyState">No papers found.</div>`;
+        return;
+      }
+
+      papersTab.innerHTML = papers.map((paper) => `
+        <div class="card" data-paper-id="${paper.id}">
+          <div class="cardTop">
+            <div>
+              <div class="paperCode">
+                ${escapeHtml(paper.code)}
+                <span class="statusBadge statusBadge-${paper.status}">${escapeHtml(paper.status)}</span>
+              </div>
+              <div class="paperTitle">${escapeHtml(paper.title)}</div>
+              <div class="metaRow">
+                <span>${escapeHtml(String(paper.year))}</span>
+                <span>${escapeHtml(paper.semester)}</span>
+                <span>${escapeHtml(paper.type)}</span>
+                 <span>${escapeHtml(paper.school_name)}</span>
+              <span>${escapeHtml(paper.department_name)}</span>
+              </div>
+            </div>
+          </div>
+
+          <a class="pdfLink" href="${paper.pdf_url}" target="_blank" rel="noopener">
+            View PDF ↗
+          </a>
+
+          <div class="cardActions">
+            ${renderPaperActions(paper)}
+          </div>
+        </div>
+      `).join('');
+    } catch (error) {
+      papersTab.innerHTML = `<div class="emptyState">${escapeHtml(error.message)}</div>`;
+    }
+  }
+
+  function renderPaperActions(paper) {
+    const deleteBtn = `<button class="actionButton deleteButton" onclick="deletePaper(${paper.id})" title="Delete permanently">🗑</button>`;
+
+    if (paper.status === 'pending') {
+      return `
+        <button class="actionButton approveButton" onclick="approvePaper(${paper.id})">Approve</button>
+        <button class="actionButton rejectButton" onclick="rejectPaper(${paper.id})">Reject</button>
+        ${deleteBtn}
+      `;
+    }
+
+    if (paper.status === 'approved') {
+      return `
+        <button class="actionButton rejectButton" onclick="rejectPaper(${paper.id})">Reject / Unpublish</button>
+        ${deleteBtn}
+      `;
+    }
+
+    return `
+      <button class="actionButton approveButton" onclick="approvePaper(${paper.id})">Restore &amp; Approve</button>
+      ${deleteBtn}
+    `;
+  }
+
+  async function approvePaper(id) {
+    try {
+      await apiRequest(`/admin/papers/${id}/approve`, { method: 'POST' });
+      showToast('Paper approved.', 'success');
+      loadPapers();
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+
+  function rejectPaper(id) {
+    showConfirmModal(
+      'Reject this paper?',
+      'It will be hidden from the app, but you can restore it later from the Rejected filter.',
+      async () => {
+        try {
+          await apiRequest(`/admin/papers/${id}/reject`, { method: 'POST' });
+          showToast('Paper rejected.', 'success');
+          loadPapers();
+        } catch (error) {
+          showToast(error.message, 'error');
+        }
+      }
+    );
+  }
+
+  function deletePaper(id) {
+    showConfirmModal(
+      'Delete this paper permanently?',
+      'This removes it from the database and deletes the PDF file from the server. This cannot be undone.',
+      async () => {
+        try {
+          await apiRequest(`/admin/papers/${id}`, { method: 'DELETE' });
+          showToast('Paper deleted.', 'success');
+          loadPapers();
+        } catch (error) {
+          showToast(error.message, 'error');
+        }
+      }
+    );
+  }
+
+  /* ---------- REPORTS ---------- */
+
+  async function loadReports() {
+    reportsTab.innerHTML = '<div class="loadingText">Loading reports...</div>';
+
+    try {
+      const reports = await apiRequest('/admin/reports?status=new');
+
+      if (reports.length === 0) {
+        reportsTab.innerHTML = '<div class="emptyState">No new reports.</div>';
+        return;
+      }
+
+      reportsTab.innerHTML = reports.map((report) => `
+        <div class="card" data-report-id="${report.id}">
+          <div class="reportMessage">${escapeHtml(report.message)}</div>
+          <div class="reportDate">${new Date(report.created_at).toLocaleString()}</div>
+
+          <div class="cardActions">
+            <button class="actionButton resolveButton" onclick="resolveReport(${report.id})">
+              Mark Resolved
+            </button>
+          </div>
+        </div>
+      `).join('');
+    } catch (error) {
+      reportsTab.innerHTML = `<div class="emptyState">${escapeHtml(error.message)}</div>`;
+    }
+  }
+
+  async function resolveReport(id) {
+    try {
+      await apiRequest(`/admin/reports/${id}/resolve`, { method: 'POST' });
+      showToast('Report marked resolved.', 'success');
+      loadReports();
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // On page load, decide whether to show login or dashboard
+  if (getToken()) {
+    showDashboard();
+  } else {
+    showLogin();
+  }
+</script>
+
+</body>
+</html>
