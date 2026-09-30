@@ -2,11 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('../db');
+const { uploadPdfToR2, deletePdfFromR2 } = require('./r2');
 
 const app = express();
 
@@ -15,27 +15,12 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-const uploadDir = path.join(__dirname, '../uploads/pdfs');
-
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/[^a-zA-Z0-9.-]+/g, '_');
-    cb(null, `${Date.now()}-${safeName}`);
-  },
-});
-
+// Multer now keeps the file in memory (as a Buffer) instead of writing
+// it to local disk — we hand that buffer straight to R2.
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (file.mimetype !== 'application/pdf') {
@@ -87,15 +72,9 @@ app.get('/api/db-test', async (req, res) => {
   }
 });
 
-// PUBLIC — the 15 schools shown on Home
 app.get('/api/schools', async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT id, name
-      FROM schools
-      ORDER BY name
-    `);
-
+    const result = await pool.query(`SELECT id, name FROM schools ORDER BY name`);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching schools:', error);
@@ -103,19 +82,14 @@ app.get('/api/schools', async (req, res) => {
   }
 });
 
-// Kept for backward compatibility / admin use
 app.get('/api/departments', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT
-        departments.id,
-        departments.name,
-        schools.name AS school_name
+      SELECT departments.id, departments.name, schools.name AS school_name
       FROM departments
       INNER JOIN schools ON departments.school_id = schools.id
       ORDER BY schools.name, departments.name
     `);
-
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching departments:', error);
@@ -123,31 +97,20 @@ app.get('/api/departments', async (req, res) => {
   }
 });
 
-// PUBLIC — only approved papers, with department and school attached
 app.get('/api/papers', async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT
-        papers.id,
-        papers.code,
-        papers.title,
-        papers.year,
-        papers.semester,
-        papers.type,
-        papers.pdf_url,
-        papers.status,
-        papers.created_at,
-        departments.id AS department_id,
-        departments.name AS department_name,
-        schools.id AS school_id,
-        schools.name AS school_name
+        papers.id, papers.code, papers.title, papers.year, papers.semester,
+        papers.type, papers.pdf_url, papers.status, papers.created_at,
+        departments.id AS department_id, departments.name AS department_name,
+        schools.id AS school_id, schools.name AS school_name
       FROM papers
       INNER JOIN departments ON papers.department_id = departments.id
       INNER JOIN schools ON departments.school_id = schools.id
       WHERE papers.status = 'approved'
       ORDER BY papers.created_at DESC
     `);
-
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching papers:', error);
@@ -155,47 +118,31 @@ app.get('/api/papers', async (req, res) => {
   }
 });
 
-// PUBLIC — upload now takes a school (must exist) and a free-text department
 app.post('/api/papers', upload.single('pdf'), async (req, res) => {
   try {
     const { school, department, code, title, year, semester, type } = req.body;
 
     if (!school || !department || !code || !title || !year || !semester || !type) {
-      return res.status(400).json({
-        status: 'ERROR',
-        message: 'Missing required fields',
-      });
+      return res.status(400).json({ status: 'ERROR', message: 'Missing required fields' });
     }
 
     if (!req.file) {
-      return res.status(400).json({
-        status: 'ERROR',
-        message: 'PDF file is required',
-      });
+      return res.status(400).json({ status: 'ERROR', message: 'PDF file is required' });
     }
 
-    const schoolResult = await pool.query(
-      'SELECT id FROM schools WHERE name = $1',
-      [school]
-    );
+    const schoolResult = await pool.query('SELECT id FROM schools WHERE name = $1', [school]);
 
     if (schoolResult.rows.length === 0) {
-      return res.status(400).json({
-        status: 'ERROR',
-        message: `Unknown school: ${school}`,
-      });
+      return res.status(400).json({ status: 'ERROR', message: `Unknown school: ${school}` });
     }
 
     const schoolId = schoolResult.rows[0].id;
     const departmentName = department.trim();
 
-    // Find an existing department under this school with the same
-    // name (case-insensitive), or create a new one.
     let departmentId;
 
     const existingDept = await pool.query(
-      `SELECT id FROM departments
-       WHERE school_id = $1 AND LOWER(name) = LOWER($2)`,
+      `SELECT id FROM departments WHERE school_id = $1 AND LOWER(name) = LOWER($2)`,
       [schoolId, departmentName]
     );
 
@@ -209,13 +156,14 @@ app.post('/api/papers', upload.single('pdf'), async (req, res) => {
       departmentId = newDept.rows[0].id;
     }
 
-    const pdfUrl = `/uploads/pdfs/${req.file.filename}`;
+    // Upload the PDF buffer to R2 instead of writing to local disk.
+    const { publicUrl } = await uploadPdfToR2(req.file.buffer, req.file.originalname);
 
     const result = await pool.query(
       `INSERT INTO papers (code, title, year, semester, type, pdf_url, department_id, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
        RETURNING id, code, title, year, semester, type, pdf_url, status, created_at, department_id`,
-      [code, title, Number(year), semester, type, pdfUrl, departmentId]
+      [code, title, Number(year), semester, type, publicUrl, departmentId]
     );
 
     res.status(201).json({ status: 'OK', paper: result.rows[0] });
@@ -230,10 +178,7 @@ app.post('/api/reports', async (req, res) => {
     const { message } = req.body;
 
     if (!message || !message.trim()) {
-      return res.status(400).json({
-        status: 'ERROR',
-        message: 'Report message is required',
-      });
+      return res.status(400).json({ status: 'ERROR', message: 'Report message is required' });
     }
 
     const result = await pool.query(
@@ -253,10 +198,7 @@ app.post('/api/admin/login', async (req, res) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({
-        status: 'ERROR',
-        message: 'Username and password are required',
-      });
+      return res.status(400).json({ status: 'ERROR', message: 'Username and password are required' });
     }
 
     const result = await pool.query('SELECT * FROM admins WHERE username = $1', [username]);
@@ -291,17 +233,9 @@ app.get('/api/admin/papers', requireAdmin, async (req, res) => {
 
     const baseQuery = `
       SELECT
-        papers.id,
-        papers.code,
-        papers.title,
-        papers.year,
-        papers.semester,
-        papers.type,
-        papers.pdf_url,
-        papers.status,
-        papers.created_at,
-        departments.name AS department_name,
-        schools.name AS school_name
+        papers.id, papers.code, papers.title, papers.year, papers.semester,
+        papers.type, papers.pdf_url, papers.status, papers.created_at,
+        departments.name AS department_name, schools.name AS school_name
       FROM papers
       INNER JOIN departments ON papers.department_id = departments.id
       INNER JOIN schools ON departments.school_id = schools.id
@@ -310,10 +244,7 @@ app.get('/api/admin/papers', requireAdmin, async (req, res) => {
     const result =
       status === 'all'
         ? await pool.query(`${baseQuery} ORDER BY papers.created_at DESC`)
-        : await pool.query(
-            `${baseQuery} WHERE papers.status = $1 ORDER BY papers.created_at DESC`,
-            [status]
-          );
+        : await pool.query(`${baseQuery} WHERE papers.status = $1 ORDER BY papers.created_at DESC`, [status]);
 
     res.json(result.rows);
   } catch (error) {
@@ -378,12 +309,11 @@ app.delete('/api/admin/papers/:id', requireAdmin, async (req, res) => {
     const { pdf_url } = result.rows[0];
 
     if (pdf_url) {
-      const filePath = path.join(__dirname, '..', pdf_url);
-      fs.unlink(filePath, (err) => {
-        if (err && err.code !== 'ENOENT') {
-          console.error('Error deleting PDF file:', err);
-        }
-      });
+      try {
+        await deletePdfFromR2(pdf_url);
+      } catch (deleteError) {
+        console.error('Error deleting PDF from R2:', deleteError);
+      }
     }
 
     res.json({ status: 'OK', message: 'Paper deleted' });
