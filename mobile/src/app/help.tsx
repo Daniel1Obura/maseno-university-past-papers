@@ -84,7 +84,7 @@ export default function HelpScreen() {
               Email Support
             </Text>
             <Text style={[styles.contactSubtitle, { color: colors.textMuted }]}>
-              support@example.com
+              techai1899@gmail.com
             </Text>
           </View>
         </TouchableOpacity>

@@ -16,6 +16,8 @@ import { usePapers } from '../../hooks/use-papers';
 import { useTheme } from '../../context/theme-context';
 import { API_ORIGIN } from '@/constants/api';
 
+import { resolvePdfUrl } from '../../utils/pdf-url';
+
 export default function SearchScreen() {
   const { colors } = useTheme();
   const [search, setSearch] = useState('');
@@ -146,7 +148,7 @@ export default function SearchScreen() {
                       year: paper.year,
                       semester: paper.semester,
                       type: paper.type,
-                      pdfUrl: paper.pdf_url ? `${API_ORIGIN}${paper.pdf_url}` : '',
+                      pdfUrl: resolvePdfUrl(paper.pdf_url),
                     },
                   })
                 }

@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 
+import { resolvePdfUrl } from '../../utils/pdf-url';
 import { School } from '../../data/schools';
 import { usePapers } from '../../hooks/use-papers';
 import { useTheme } from '../../context/theme-context';
@@ -265,7 +266,7 @@ export default function HomeScreen() {
                         year: paper.year,
                         semester: paper.semester,
                         type: paper.type,
-                        pdfUrl: paper.pdf_url ? `${API_ORIGIN}${paper.pdf_url}` : '',
+                        pdfUrl: resolvePdfUrl(paper.pdf_url),
                       },
                     })
                   }
@@ -545,7 +546,7 @@ export default function HomeScreen() {
                           year: paper.year,
                           semester: paper.semester,
                           type: paper.type,
-                          pdfUrl: paper.pdf_url ? `${API_ORIGIN}${paper.pdf_url}` : '',
+                         pdfUrl: resolvePdfUrl(paper.pdf_url),
                         },
                       })
                     }
