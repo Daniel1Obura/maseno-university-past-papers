@@ -32,13 +32,6 @@ function ThemedNavigation() {
               headerShown: false,
             }}
           />
-
-          <Stack.Screen
-            name="explore"
-            options={{
-              headerShown: false,
-            }}
-          />
         </Stack>
 
         <BrandedSplash />
