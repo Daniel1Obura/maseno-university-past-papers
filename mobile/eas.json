@@ -4,20 +4,9 @@
     "appVersionSource": "remote"
   },
   "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
     "preview": {
-      "distribution": "internal"
-    },
-    "production": {
-      "autoIncrement": true
-    },
-    "production-apk": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://maseno-university-past-papers-production.up.railway.app/api"
       }
     }
   },
