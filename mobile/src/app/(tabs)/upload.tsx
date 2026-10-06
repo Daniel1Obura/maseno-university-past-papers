@@ -125,12 +125,29 @@ export default function UploadScreen() {
       Alert.alert('Paper Submitted', 'Your paper has been uploaded successfully.');
       resetForm();
     } catch (error) {
-      console.error('Submit paper error:', error);
-      Alert.alert(
-        'Upload Failed',
-        error instanceof Error ? error.message : 'Something went wrong while uploading your paper.'
-      );
-    } finally {
+  console.error('Submit paper error:', error);
+
+  const errorMessage = error instanceof Error ? error.message : String(error);
+
+  const isNetworkError =
+    error instanceof TypeError ||
+    errorMessage.includes('Network request failed') ||
+    errorMessage.includes('UnknownHostException') ||
+    errorMessage.includes('Unable to resolve host') ||
+    errorMessage.includes('Failed to fetch');
+
+  if (isNetworkError) {
+    Alert.alert(
+      'No Internet Connection',
+      'Please check your internet connection and try again.'
+    );
+  } else {
+    Alert.alert(
+      'Upload Failed',
+      errorMessage || 'Something went wrong while uploading your paper.'
+    );
+  }
+}finally {
       setIsSubmitting(false);
     }
   };

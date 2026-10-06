@@ -51,16 +51,30 @@ export default function ReportScreen() {
         'Thanks for letting us know. An admin will review it shortly.',
         [{ text: 'OK', onPress: () => router.back() }]
       );
-    } catch (error) {
-      console.error('Submit report error:', error);
+} catch (error) {
+  console.error('Submit report error:', error);
 
-      Alert.alert(
-        'Submission Failed',
-        error instanceof Error
-          ? error.message
-          : 'Something went wrong while submitting your report.'
-      );
-    } finally {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+
+  const isNetworkError =
+    error instanceof TypeError ||
+    errorMessage.includes('Network request failed') ||
+    errorMessage.includes('UnknownHostException') ||
+    errorMessage.includes('Unable to resolve host') ||
+    errorMessage.includes('Failed to fetch');
+
+  if (isNetworkError) {
+    Alert.alert(
+      'No Internet Connection',
+      'Please check your internet connection and try again.'
+    );
+  } else {
+    Alert.alert(
+      'Submission Failed',
+      errorMessage || 'Something went wrong while submitting your report.'
+    );
+  }
+} finally {
       setIsSubmitting(false);
     }
   };
