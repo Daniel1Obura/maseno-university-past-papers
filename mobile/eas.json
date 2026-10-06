@@ -9,18 +9,16 @@
       "distribution": "internal"
     },
     "preview": {
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://maseno-university-past-papers-production.up.railway.app/api"
-      }
-    },
-    "production": {
-      "autoIncrement": true
+      "distribution": "internal"
     },
     "production-apk": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       }
+    },
+    "production": {
+      "autoIncrement": true
     }
   },
   "submit": {
