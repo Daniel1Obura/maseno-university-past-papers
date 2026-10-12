@@ -17,6 +17,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_BASE_URL } from '../constants/api';
 import { useTheme } from '../context/theme-context';
 
+import {
+  isNetworkError,
+  NO_CONNECTION_MESSAGE,
+  NO_CONNECTION_TITLE,
+} from '../utils/network-error';
+
 export default function ReportScreen() {
   const { colors } = useTheme();
   const [message, setMessage] = useState('');
@@ -51,34 +57,23 @@ export default function ReportScreen() {
         'Thanks for letting us know. An admin will review it shortly.',
         [{ text: 'OK', onPress: () => router.back() }]
       );
-} catch (error) {
-  console.error('Submit report error:', error);
+    } catch (error) {
+      console.error('Submit report error:', error);
 
-  const errorMessage = error instanceof Error ? error.message : String(error);
-
-  const isNetworkError =
-    error instanceof TypeError ||
-    errorMessage.includes('Network request failed') ||
-    errorMessage.includes('UnknownHostException') ||
-    errorMessage.includes('Unable to resolve host') ||
-    errorMessage.includes('Failed to fetch');
-
-  if (isNetworkError) {
-    Alert.alert(
-      'No Internet Connection',
-      'Please check your internet connection and try again.'
-    );
-  } else {
-    Alert.alert(
-      'Submission Failed',
-      errorMessage || 'Something went wrong while submitting your report.'
-    );
-  }
-} finally {
+      if (isNetworkError(error)) {
+        Alert.alert(NO_CONNECTION_TITLE, NO_CONNECTION_MESSAGE);
+      } else {
+        Alert.alert(
+          'Submission Failed',
+          error instanceof Error
+            ? error.message
+            : 'Something went wrong while submitting your report.'
+        );
+      }
+    } finally {
       setIsSubmitting(false);
     }
-  };
-
+    };
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView

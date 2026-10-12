@@ -16,6 +16,12 @@ import { API_BASE_URL } from '../../constants/api';
 import { ALL_SCHOOL_NAMES } from '../../data/schools';
 import { useTheme } from '../../context/theme-context';
 
+import {
+  isNetworkError,
+  NO_CONNECTION_MESSAGE,
+  NO_CONNECTION_TITLE,
+} from '../../utils/network-error';
+
 const semesters = ['Semester 1', 'Semester 2'];
 
 const paperTypes = ['CAT', 'Main Exam', 'Supplementary Exam'];
@@ -69,7 +75,8 @@ export default function UploadScreen() {
     setFileUri('');
   };
 
-  const submitPaper = async () => {
+
+    const submitPaper = async () => {
     if (
       !school ||
       !department.trim() ||
@@ -125,29 +132,19 @@ export default function UploadScreen() {
       Alert.alert('Paper Submitted', 'Your paper has been uploaded successfully.');
       resetForm();
     } catch (error) {
-  console.error('Submit paper error:', error);
+      console.error('Submit paper error:', error);
 
-  const errorMessage = error instanceof Error ? error.message : String(error);
-
-  const isNetworkError =
-    error instanceof TypeError ||
-    errorMessage.includes('Network request failed') ||
-    errorMessage.includes('UnknownHostException') ||
-    errorMessage.includes('Unable to resolve host') ||
-    errorMessage.includes('Failed to fetch');
-
-  if (isNetworkError) {
-    Alert.alert(
-      'No Internet Connection',
-      'Please check your internet connection and try again.'
-    );
-  } else {
-    Alert.alert(
-      'Upload Failed',
-      errorMessage || 'Something went wrong while uploading your paper.'
-    );
-  }
-}finally {
+      if (isNetworkError(error)) {
+        Alert.alert(NO_CONNECTION_TITLE, NO_CONNECTION_MESSAGE);
+      } else {
+        Alert.alert(
+          'Upload Failed',
+          error instanceof Error
+            ? error.message
+            : 'Something went wrong while uploading your paper.'
+        );
+      }
+    } finally {
       setIsSubmitting(false);
     }
   };
